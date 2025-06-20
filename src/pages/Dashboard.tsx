@@ -3,12 +3,22 @@ import { useAuth } from "@/context/AuthContext";
 import { useComplaints } from "@/context/ComplaintContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { useSchemes } from "@/context/SchemesContext";
+import { useLanguage } from "@/context/LanguageContext";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BarChart3,
   TrendingUp,
@@ -34,13 +44,28 @@ import {
   Zap,
   Target,
   PieChart,
+  ChevronDown,
 } from "lucide-react";
 import { AdminSchemeModal } from "@/components/AdminSchemeModal";
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { complaints, getComplaintStats } = useComplaints();
-  const { notifications, unreadCount } = useNotifications();
+  const {
+    complaints,
+    getComplaintStats,
+    updateComplaint,
+    deleteComplaint,
+    updateComplaintStatus,
+    deleteResolvedComplaints,
+  } = useComplaints();
+  const {
+    notifications,
+    unreadCount,
+    addNotification,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
+  const { t } = useLanguage();
   const {
     schemes,
     getTotalViews,
@@ -101,13 +126,16 @@ const Dashboard = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            No User Found
-          </h1>
-          <p className="text-gray-600">
-            Please log in to access the dashboard.
-          </p>
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Admin Dashboard Access
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Please log in with admin credentials to access the dashboard.
+            </p>
+            <AdminLoginHelper />
+          </div>
         </div>
       </div>
     );
@@ -116,17 +144,28 @@ const Dashboard = () => {
   if (user.userType !== "admin") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Access Denied
-          </h1>
-          <p className="text-gray-600">
-            This page is only accessible to admin users. Your user type:{" "}
-            {user.userType}
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Current user: {user.name} ({user.email})
-          </p>
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Access Denied
+            </h1>
+            <p className="text-gray-600 mb-4">
+              This page is only accessible to admin users.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-gray-700">
+                <strong>Current user:</strong> {user.name}
+              </p>
+              <p className="text-sm text-gray-700">
+                <strong>Email:</strong> {user.email}
+              </p>
+              <p className="text-sm text-gray-700">
+                <strong>User Type:</strong> {user.userType}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">Required: admin</p>
+            </div>
+            <AdminLoginHelper />
+          </div>
         </div>
       </div>
     );
@@ -177,15 +216,13 @@ const Dashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Admin Dashboard
+                {t("admin_dashboard")}
               </h1>
-              <p className="text-gray-600 mt-1">
-                Complete platform management and oversight
-              </p>
+              <p className="text-gray-600 mt-1">{t("platform_management")}</p>
             </div>
             <div className="flex items-center space-x-3 mt-4 sm:mt-0">
               <Button size="sm" className="bg-red-600 hover:bg-red-700">
-                Administrator Access
+                {t("administrator_access")}
               </Button>
             </div>
           </div>
@@ -196,32 +233,44 @@ const Dashboard = () => {
             onValueChange={setActiveTab}
             className="space-y-6"
           >
-            <TabsList className="grid w-full grid-cols-5 bg-white">
+            <TabsList className="grid w-full grid-cols-6 bg-white">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                Overview
+                {t("overview")}
               </TabsTrigger>
               <TabsTrigger
                 value="complaints"
                 className="flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
-                Complaints
+                {t("complaints")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="notifications"
+                className="flex items-center gap-2 relative"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                {t("notifications")}
+                {unreadCount > 0 && (
+                  <Badge className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white">
+                    {unreadCount}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="schemes" className="flex items-center gap-2">
                 <Settings className="w-4 h-4" />
-                Schemes
+                {t("schemes")}
               </TabsTrigger>
               <TabsTrigger
                 value="analytics"
                 className="flex items-center gap-2"
               >
                 <TrendingUp className="w-4 h-4" />
-                Analytics
+                {t("analytics")}
               </TabsTrigger>
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
-                Users
+                {t("users")}
               </TabsTrigger>
               <TabsTrigger
                 value="notifications"
@@ -288,25 +337,16 @@ const Dashboard = () => {
                     Category Distribution
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {categoryData.map((category, index) => (
-                    <div key={category.name} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-700">
-                          {category.name}
-                        </span>
-                        <span className="text-sm font-medium text-gray-900">
-                          {category.count}
-                        </span>
-                      </div>
-                      <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className={`absolute top-0 left-0 h-full ${category.color} rounded-full transition-all duration-1000 ease-out`}
-                          style={{ width: `${category.percentage}%` }}
-                        />
-                      </div>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <h3 className="text-sm font-medium text-gray-600 mb-2">
+                      {t("total_complaints")}
+                    </h3>
+                    <div className="text-4xl font-bold text-blue-600 mb-1">
+                      {totalComplaints}
                     </div>
-                  ))}
+                    <p className="text-xs text-gray-500">{t("all")}</p>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -386,18 +426,17 @@ const Dashboard = () => {
                 </Card>
 
                 <Card className="bg-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600">Categories</p>
-                        <p className="text-2xl font-bold text-gray-900">
-                          {schemesData.categories}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Different categories
-                        </p>
+                  <CardContent className="p-6">
+                    <div className="text-center">
+                      <h3 className="text-sm font-medium text-gray-600 mb-2">
+                        {t("pending_complaints")}
+                      </h3>
+                      <div className="text-4xl font-bold text-yellow-600 mb-1">
+                        {stats.pending}
                       </div>
-                      <Filter className="w-5 h-5 text-gray-400" />
+                      <p className="text-xs text-gray-500">
+                        {t("awaiting_assignment", "Awaiting assignment")}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -508,49 +547,221 @@ const Dashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            {/* Complaints Tab */}
-            <TabsContent value="complaints" className="space-y-6">
+              {/* Recent Complaints Overview */}
               <Card className="bg-white">
-                <CardHeader>
-                  <CardTitle>Recent Complaints</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-gray-900">
+                    {t("recent_complaints")}
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveTab("complaints")}
+                  >
+                    {t("view_all")} ({complaints.length})
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {complaints.slice(0, 5).map((complaint) => (
                       <div
                         key={complaint.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
                       >
                         <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">
-                            {complaint.title}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {complaint.category} • {complaint.location}
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-gray-900">
+                              {complaint.title}
+                            </h4>
+                            <Badge
+                              variant={
+                                complaint.priority === "high"
+                                  ? "destructive"
+                                  : complaint.priority === "medium"
+                                    ? "default"
+                                    : "secondary"
+                              }
+                              className="text-xs"
+                            >
+                              {complaint.priority}
+                            </Badge>
+                            <Badge
+                              variant={
+                                complaint.status === "resolved"
+                                  ? "default"
+                                  : complaint.status === "in-progress"
+                                    ? "secondary"
+                                    : "outline"
+                              }
+                              className="text-xs"
+                            >
+                              {complaint.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-1">
+                            {complaint.description.length > 100
+                              ? complaint.description.substring(0, 100) + "..."
+                              : complaint.description}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            By {complaint.name} • {complaint.id}
-                          </p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span>By: {complaint.name}</span>
+                            <span>Phone: {complaint.phone}</span>
+                            <span>
+                              Location:{" "}
+                              {complaint.landmark || complaint.location}
+                            </span>
+                            <span>
+                              {new Date(
+                                complaint.createdAt,
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <Badge
-                            className={
-                              complaint.priority === "high"
-                                ? "bg-red-100 text-red-800"
-                                : complaint.priority === "medium"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-green-100 text-green-800"
-                            }
+                        <div className="flex items-center gap-2 ml-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setActiveTab("complaints")}
                           >
-                            {complaint.priority}
-                          </Badge>
-                          <Badge variant="outline">{complaint.status}</Badge>
+                            View Details
+                          </Button>
                         </div>
                       </div>
                     ))}
+
+                    {complaints.length === 0 && (
+                      <div className="text-center py-8">
+                        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h4 className="text-lg font-medium text-gray-600 mb-2">
+                          {t("no_complaints_yet")}
+                        </h4>
+                        <p className="text-gray-500">
+                          {t("complaints_will_appear")}
+                        </p>
+                      </div>
+                    )}
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Complaints Tab */}
+            <TabsContent value="complaints" className="space-y-6">
+              {/* Complaints Management Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {t("complaint_management")}
+                  </h2>
+                  <p className="text-gray-600">{t("assign_track_manage")}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder={t("filter_by_status")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("all_complaints")}</SelectItem>
+                      <SelectItem value="pending">
+                        {t("pending_complaints")}
+                      </SelectItem>
+                      <SelectItem value="assigned">{t("assigned")}</SelectItem>
+                      <SelectItem value="in-progress">
+                        {t("in_progress")}
+                      </SelectItem>
+                      <SelectItem value="resolved">
+                        {t("resolved_complaints")}
+                      </SelectItem>
+                      <SelectItem value="closed">{t("closed")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const deletedCount = deleteResolvedComplaints();
+                      alert(
+                        `${t("delete", "Deleted")} ${deletedCount} ${t("resolved_complaints").toLowerCase()}`,
+                      );
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {t("clean_resolved")}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Complaints Table */}
+              <Card className="bg-white">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-gray-50">
+                          <th className="text-left py-4 px-6 font-medium text-gray-700">
+                            Complaint Details
+                          </th>
+                          <th className="text-left py-4 px-6 font-medium text-gray-700">
+                            Citizen Info
+                          </th>
+                          <th className="text-left py-4 px-6 font-medium text-gray-700">
+                            Priority & Category
+                          </th>
+                          <th className="text-left py-4 px-6 font-medium text-gray-700">
+                            Status & Assignment
+                          </th>
+                          <th className="text-left py-4 px-6 font-medium text-gray-700">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {complaints.map((complaint) => (
+                          <ComplaintRow
+                            key={complaint.id}
+                            complaint={complaint}
+                            onUpdateStatus={(id, status, notes, assignedTo) => {
+                              updateComplaintStatus(
+                                id,
+                                status,
+                                notes,
+                                assignedTo || "Admin",
+                                addNotification,
+                              );
+                              if (assignedTo) {
+                                updateComplaint(id, { assignedTo });
+                              }
+                              if (status === "resolved") {
+                                updateComplaint(id, { resolutionNotes: notes });
+                              }
+                            }}
+                            onDelete={(id) => {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to delete this complaint?",
+                                )
+                              ) {
+                                deleteComplaint(id);
+                              }
+                            }}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {complaints.length === 0 && (
+                    <div className="text-center py-12">
+                      <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h4 className="text-xl font-medium text-gray-600 mb-2">
+                        No Complaints Yet
+                      </h4>
+                      <p className="text-gray-500">
+                        When citizens submit complaints, they will appear here
+                        for management.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1200,14 +1411,157 @@ const Dashboard = () => {
             </TabsContent>
 
             <TabsContent value="notifications">
-              <Card className="bg-white p-8 text-center">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Notification Center
-                </h3>
-                <p className="text-gray-600">
-                  You have {unreadCount} unread notifications.
-                </p>
-              </Card>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Admin Notifications
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <Badge
+                      variant="outline"
+                      className="bg-red-50 text-red-700 border-red-200"
+                    >
+                      {unreadCount} Unread
+                    </Badge>
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          markAllAsRead();
+                        }}
+                      >
+                        Mark All Read
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => (window.location.href = "/notifications")}
+                    >
+                      View All
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-4">
+                  {notifications.slice(0, 10).map((notification) => (
+                    <Card
+                      key={notification.id}
+                      className={`cursor-pointer transition-all duration-200 hover:shadow-md ${!notification.isRead ? "border-l-4 border-l-red-500 bg-red-50/30" : "bg-white"}`}
+                      onClick={() => {
+                        // Mark as read when clicked
+                        if (!notification.isRead) {
+                          markAsRead(notification.id);
+                        }
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-medium text-gray-900">
+                                {notification.title}
+                              </h4>
+                              <Badge
+                                variant={
+                                  notification.priority === "high"
+                                    ? "destructive"
+                                    : notification.priority === "medium"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {notification.priority}
+                              </Badge>
+                              {!notification.isRead && (
+                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">
+                              {notification.message}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span>
+                                {new Date(
+                                  notification.createdAt,
+                                ).toLocaleString()}
+                              </span>
+                              {notification.complaintId && (
+                                <span className="flex items-center gap-1">
+                                  <FileText className="w-3 h-3" />
+                                  {notification.complaintId}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!notification.isRead && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markAsRead(notification.id);
+                                }}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                Mark Read
+                              </Button>
+                            )}
+                            {notification.complaintId && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Mark as read and navigate to complaints
+                                  if (!notification.isRead) {
+                                    markAsRead(notification.id);
+                                  }
+                                  setActiveTab("complaints");
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  {notifications.length === 0 && (
+                    <Card className="bg-gray-50">
+                      <CardContent className="p-8 text-center">
+                        <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h4 className="text-lg font-medium text-gray-600 mb-2">
+                          No Notifications
+                        </h4>
+                        <p className="text-gray-500">
+                          New complaint notifications will appear here when
+                          citizens submit complaints.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {notifications.length > 10 && (
+                    <div className="text-center">
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          (window.location.href = "/notifications")
+                        }
+                      >
+                        View All {notifications.length} Notifications
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
 
@@ -1221,6 +1575,442 @@ const Dashboard = () => {
             onDelete={handleDeleteScheme}
           />
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ComplaintRow component for managing individual complaints
+const ComplaintRow = ({
+  complaint,
+  onUpdateStatus,
+  onDelete,
+}: {
+  complaint: any;
+  onUpdateStatus: (
+    id: string,
+    status: string,
+    notes: string,
+    assignedTo?: string,
+  ) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [newStatus, setNewStatus] = useState(complaint.status);
+  const [assignTo, setAssignTo] = useState(complaint.assignedTo || "");
+  const [notes, setNotes] = useState("");
+
+  const officials = [
+    "GHMC Roads Department",
+    "Hyderabad Water Board",
+    "TSRTC Transport",
+    "Electricity Board",
+    "Sanitation Department",
+    "Street Lighting Department",
+    "Parks & Recreation",
+    "Traffic Police",
+  ];
+
+  const handleStatusUpdate = () => {
+    if (!notes.trim()) {
+      alert("Please add notes for the status update");
+      return;
+    }
+    setIsUpdating(true);
+    onUpdateStatus(complaint.id, newStatus, notes, assignTo);
+    setNotes("");
+    setIsUpdating(false);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "assigned":
+        return "bg-blue-100 text-blue-800";
+      case "in-progress":
+        return "bg-purple-100 text-purple-800";
+      case "resolved":
+        return "bg-green-100 text-green-800";
+      case "closed":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-100 text-red-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  return (
+    <>
+      <tr className="border-b border-gray-100 hover:bg-gray-50">
+        <td className="py-4 px-6">
+          <div className="space-y-1">
+            <div className="font-medium text-gray-900 flex items-center gap-2">
+              {complaint.title}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDetails(!showDetails)}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                {showDetails ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ArrowUpRight className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+            <p className="text-sm text-gray-600 max-w-md">
+              {complaint.description.length > 100
+                ? complaint.description.substring(0, 100) + "..."
+                : complaint.description}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>ID: {complaint.id}</span>
+              <span>•</span>
+              <span>{new Date(complaint.createdAt).toLocaleDateString()}</span>
+              <span>•</span>
+              <span>{complaint.landmark || complaint.location}</span>
+            </div>
+          </div>
+        </td>
+
+        <td className="py-4 px-6">
+          <div className="space-y-1">
+            <div className="font-medium text-gray-900">{complaint.name}</div>
+            <div className="text-sm text-gray-600">{complaint.phone}</div>
+            <div className="text-sm text-gray-600">{complaint.email}</div>
+          </div>
+        </td>
+
+        <td className="py-4 px-6">
+          <div className="space-y-2">
+            <Badge className={getPriorityColor(complaint.priority)}>
+              {complaint.priority.toUpperCase()}
+            </Badge>
+            <div className="text-sm font-medium text-gray-700">
+              {complaint.category.toUpperCase()}
+            </div>
+            <div className="text-xs text-gray-500">{complaint.subcategory}</div>
+          </div>
+        </td>
+
+        <td className="py-4 px-6">
+          <div className="space-y-2">
+            <Badge className={getStatusColor(complaint.status)}>
+              {complaint.status.toUpperCase()}
+            </Badge>
+            {complaint.assignedTo && (
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">Assigned to:</span>
+                <br />
+                {complaint.assignedTo}
+              </div>
+            )}
+          </div>
+        </td>
+
+        <td className="py-4 px-6">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              <Eye className="w-4 h-4 mr-1" />
+              {showDetails ? "Hide" : "View"}
+            </Button>
+
+            {complaint.status === "resolved" ||
+            complaint.status === "closed" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDelete(complaint.id)}
+                className="text-red-600 hover:text-red-800"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDetails(!showDetails)}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                Manage
+              </Button>
+            )}
+          </div>
+        </td>
+      </tr>
+
+      {/* Expanded Details and Management Row */}
+      {showDetails && (
+        <tr className="bg-blue-50 border-b border-blue-200">
+          <td colSpan={5} className="py-6 px-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Complaint Details */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">
+                  Complaint Details
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <strong>Full Description:</strong> {complaint.description}
+                  </p>
+                  <p>
+                    <strong>Location:</strong> {complaint.location}
+                  </p>
+                  <p>
+                    <strong>Landmark:</strong> {complaint.landmark}
+                  </p>
+                  <p>
+                    <strong>Category:</strong> {complaint.category} /{" "}
+                    {complaint.subcategory}
+                  </p>
+                </div>
+
+                {/* History */}
+                <div className="space-y-2">
+                  <h5 className="font-medium text-gray-800">Status History</h5>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {complaint.history.map((entry: any, index: number) => (
+                      <div key={index} className="bg-white p-3 rounded text-sm">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <Badge
+                              className={getStatusColor(entry.status)}
+                              variant="outline"
+                            >
+                              {entry.status}
+                            </Badge>
+                            <p className="mt-1">{entry.notes}</p>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            <div>
+                              {new Date(entry.timestamp).toLocaleString()}
+                            </div>
+                            <div>by {entry.updatedBy}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Management Panel */}
+              {complaint.status !== "resolved" &&
+                complaint.status !== "closed" && (
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-gray-900">
+                      Manage Complaint
+                    </h4>
+
+                    {/* Status Update */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Update Status
+                        </label>
+                        <Select value={newStatus} onValueChange={setNewStatus}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="assigned">Assigned</SelectItem>
+                            <SelectItem value="in-progress">
+                              In Progress
+                            </SelectItem>
+                            <SelectItem value="resolved">Resolved</SelectItem>
+                            <SelectItem value="closed">Closed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Assign to Official */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Assign to Official/Department
+                        </label>
+                        <Select value={assignTo} onValueChange={setAssignTo}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select department or official" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {officials.map((official) => (
+                              <SelectItem key={official} value={official}>
+                                {official}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Notes */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Update Notes (Required)
+                        </label>
+                        <Textarea
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          placeholder="Add notes about this status update..."
+                          rows={3}
+                        />
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={handleStatusUpdate}
+                          disabled={isUpdating || !notes.trim()}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {isUpdating ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Update Status
+                            </>
+                          )}
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowDetails(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              {/* Resolved/Closed Actions */}
+              {(complaint.status === "resolved" ||
+                complaint.status === "closed") && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">
+                    Completed Complaint
+                  </h4>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-medium text-green-800">
+                        This complaint has been {complaint.status}
+                      </span>
+                    </div>
+                    {complaint.resolutionNotes && (
+                      <p className="text-sm text-green-700 mb-3">
+                        <strong>Resolution Notes:</strong>{" "}
+                        {complaint.resolutionNotes}
+                      </p>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDelete(complaint.id)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete This Complaint
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
+
+// Helper component for quick admin login during development
+const AdminLoginHelper = () => {
+  const { login } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleAdminLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      // Use the default admin credentials
+      const success = await login("admin@tgcivic.gov.in", "admin123", "admin");
+      if (success) {
+        // Reload the page to reflect the new auth state
+        window.location.reload();
+      } else {
+        alert("Failed to log in as admin. Please check the credentials.");
+      }
+    } catch (error) {
+      console.error("Admin login error:", error);
+      alert("Error logging in as admin: " + error);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="border-t border-gray-200 pt-4">
+        <p className="text-sm text-gray-600 mb-3">
+          For demo purposes, you can quickly log in as admin:
+        </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-blue-800">
+            <strong>Admin Credentials:</strong>
+          </p>
+          <p className="text-sm text-blue-700">Email: admin@tgcivic.gov.in</p>
+          <p className="text-sm text-blue-700">Password: admin123</p>
+        </div>
+        <Button
+          onClick={handleAdminLogin}
+          disabled={isLoggingIn}
+          className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+        >
+          {isLoggingIn ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Logging in...
+            </>
+          ) : (
+            <>
+              <Shield className="w-4 h-4 mr-2" />
+              Quick Admin Login
+            </>
+          )}
+        </Button>
+      </div>
+      <div className="text-center">
+        <Button
+          variant="outline"
+          onClick={() => (window.location.href = "/login")}
+          className="w-full"
+        >
+          Go to Login Page
+        </Button>
       </div>
     </div>
   );

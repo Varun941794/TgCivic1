@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useSchemes, Scheme } from "@/context/SchemesContext";
+import { useLanguage } from "@/context/LanguageContext";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ import {
 const Schemes = () => {
   const { schemes, getAllCategories, searchSchemes, incrementViews } =
     useSchemes();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [filteredSchemes, setFilteredSchemes] = useState(schemes);

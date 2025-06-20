@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useComplaints } from "@/context/ComplaintContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,6 +42,7 @@ const TrackComplaint = () => {
   const navigate = useNavigate();
   const { complaints, getComplaintById, getComplaintsByPhone } =
     useComplaints();
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(complaints.slice(0, 5));
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
@@ -185,11 +187,9 @@ const TrackComplaint = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Track Your Complaint
+            {t("track_your_complaint")}
           </h1>
-          <p className="text-lg text-gray-600">
-            Enter your complaint ID or phone number to check status
-          </p>
+          <p className="text-lg text-gray-600">{t("enter_complaint_id")}</p>
         </div>
 
         {/* Search Section */}
@@ -197,17 +197,14 @@ const TrackComplaint = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="w-5 h-5" />
-              Search Complaint
+              {t("search_complaints")}
             </CardTitle>
-            <CardDescription>
-              Enter your complaint ID (e.g., TSC2024001234) or registered phone
-              number
-            </CardDescription>
+            <CardDescription>{t("search_placeholder")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex space-x-4">
               <Input
-                placeholder="Complaint ID or Phone Number"
+                placeholder={t("search_placeholder")}
                 className="flex-1"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

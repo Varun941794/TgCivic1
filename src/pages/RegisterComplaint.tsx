@@ -54,7 +54,7 @@ const RegisterComplaint = () => {
   const navigate = useNavigate();
   const { addComplaint } = useComplaints();
   const { addNotification } = useNotifications();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [complaintId, setComplaintId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -266,41 +266,27 @@ const RegisterComplaint = () => {
       // Convert images to base64
       const imageBase64 = await convertFilesToBase64(formData.images);
 
-      // Submit complaint
-      const id = addComplaint({
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        subcategory: formData.subcategory,
-        location: formData.location,
-        landmark: formData.landmark,
-        priority: formData.priority,
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email,
-        images: imageBase64,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-      });
+      // Submit complaint with automatic admin notification
+      const id = addComplaint(
+        {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          subcategory: formData.subcategory,
+          location: formData.location,
+          landmark: formData.landmark,
+          priority: formData.priority,
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          images: imageBase64,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+        },
+        addNotification,
+      ); // Pass the notification callback
 
-      // Send notification to admins about new complaint
-      addNotification({
-        type: "complaint_submitted",
-        title: `🚨 New ${formData.priority === "high" ? "HIGH PRIORITY" : formData.priority.toUpperCase()} Complaint`,
-        message: `${formData.category.toUpperCase()}: "${formData.title}" - Submitted by ${formData.name} (${formData.phone}) at ${formData.landmark || formData.location}. ${formData.description.substring(0, 100)}${formData.description.length > 100 ? "..." : ""}`,
-        complaintId: id,
-        userId: "all-admins", // Target all admin users
-        userRole: "admin",
-        priority:
-          formData.priority === "high"
-            ? "high"
-            : formData.priority === "medium"
-              ? "medium"
-              : "low",
-        actionUrl: "/dashboard",
-      });
-
-      // Also send a general notification for all officials
+      // Also send a notification for all officials
       addNotification({
         type: "complaint_submitted",
         title: "📋 New Complaint Assigned",
@@ -360,12 +346,10 @@ const RegisterComplaint = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Register Complaint
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {t("register_new_complaint")}
           </h1>
-          <p className="text-lg text-gray-600">
-            Report your civic issue in detail
-          </p>
+          <p className="text-gray-600">{t("report_civic_issues")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -374,11 +358,9 @@ const RegisterComplaint = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Issue Category
+                {t("issue_category")}
               </CardTitle>
-              <CardDescription>
-                Choose the category related to your issue
-              </CardDescription>
+              <CardDescription>{t("select_category")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -408,7 +390,7 @@ const RegisterComplaint = () => {
 
               {formData.category && (
                 <div className="mt-4">
-                  <Label htmlFor="subcategory">Subcategory</Label>
+                  <Label htmlFor="subcategory">{t("subcategory")}</Label>
                   <Select
                     value={formData.subcategory}
                     onValueChange={(value) =>

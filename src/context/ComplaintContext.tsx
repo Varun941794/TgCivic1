@@ -48,6 +48,7 @@ interface ComplaintContextType {
       Complaint,
       "id" | "createdAt" | "updatedAt" | "status" | "history"
     >,
+    notificationCallback?: (notification: any) => void,
   ) => string;
   updateComplaint: (id: string, updates: Partial<Complaint>) => void;
   deleteComplaint: (id: string) => boolean;
@@ -224,6 +225,7 @@ export const ComplaintProvider = ({ children }: { children: ReactNode }) => {
       Complaint,
       "id" | "createdAt" | "updatedAt" | "status" | "history"
     >,
+    notificationCallback?: (notification: any) => void,
   ): string => {
     const id = generateComplaintId();
     const now = new Date().toISOString();
@@ -245,6 +247,32 @@ export const ComplaintProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setComplaints((prev) => [newComplaint, ...prev]);
+
+    // Send notification to all admins about the new complaint
+    if (notificationCallback) {
+      const priorityIcon =
+        complaintData.priority === "high"
+          ? "🚨"
+          : complaintData.priority === "medium"
+            ? "📋"
+            : "📝";
+      const priorityText =
+        complaintData.priority === "high"
+          ? "HIGH PRIORITY"
+          : complaintData.priority.toUpperCase();
+
+      notificationCallback({
+        type: "complaint_submitted",
+        title: `${priorityIcon} NEW ${priorityText} COMPLAINT`,
+        message: `${complaintData.category.toUpperCase()}: "${complaintData.title}" - Submitted by ${complaintData.name} (${complaintData.phone}) at ${complaintData.landmark || complaintData.location}. ${complaintData.description.substring(0, 100)}${complaintData.description.length > 100 ? "..." : ""}`,
+        complaintId: id,
+        userId: "all-admins",
+        userRole: "admin",
+        priority: complaintData.priority,
+        actionUrl: "/dashboard",
+      });
+    }
+
     return id;
   };
 
